@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BANWISS AI VAR | M5 Pro</title>
+    <style>
+        :root { --m-blue: #005eb8; --m-red: #ce1126; --m-black: #000; }
+        body { background: var(--m-black); color: white; margin: 0; padding: 0; font-family: sans-serif; overflow: hidden; }
+        
+        /* حاوية الفيديو: تأخذ المساحة المتبقية فوق الأزرار */
+        .video-wrapper {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 160px;
+            display: flex; justify-content: center; align-items: center; background: #000;
+        }
+        video { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+        /* شريط التحكم الثابت أسفل الشاشة (لا يتأثر بالزووم) */
+        .fixed-footer {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            height: 150px; background: rgba(15, 15, 15, 0.98);
+            border-top: 3px solid var(--m-blue);
+            display: flex; flex-direction: column; justify-content: space-evenly;
+            z-index: 999999; padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .row { display: flex; gap: 8px; justify-content: center; padding: 0 10px; }
+        
+        .btn { 
+            flex: 1; padding: 12px 5px; border: none; border-radius: 6px; 
+            color: white; font-weight: bold; font-size: 14px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 5px;
+        }
+        .btn-m { background: var(--m-blue); }
+        .btn-var { background: var(--m-red); }
+        .btn-gray { background: #333; }
+        .btn-active { border: 2px solid white; box-shadow: 0 0 15px var(--m-red); }
+    </style>
+</head>
+<body>
+
+<div class="video-wrapper">
+    <video id="m5Video" playsinline autoplay muted></video>
+</div>
+
+<div class="fixed-footer">
+    <div class="row">
+        <label class="btn btn-m">📁 فيديو <input type="file" id="vInput" hidden accept="video/*"></label>
+        <button class="btn btn-var" onclick="startCamera()">📷 فتح الكاميرا</button>
+        <button class="btn btn-gray" onclick="stopCamera()">❌ إغلاق</button>
+    </div>
+
+    <div class="row">
+        <button class="btn btn-gray" onclick="v.currentTime -= 1">⏪ 1ث</button>
+        <button class="btn btn-m" onclick="v.play()">▶️</button>
+        <button class="btn btn-m" onclick="v.pause()">⏸️</button>
+        <button class="btn btn-gray" onclick="v.currentTime += 1">1ث ⏩</button>
+    </div>
+
+    <div class="row">
+        <button class="btn btn-var" id="replayBtn" onclick="toggleLoop()">🔄 إعادة مستمرة</button>
+        <button class="btn btn-gray" onclick="v.playbackRate = 0.5">🐢 بطيء</button>
+        <button class="btn btn-gray" onclick="v.playbackRate = 1">🏎️ عادي</button>
+    </div>
+</div>
+
+<script>
+    const v = document.getElementById('m5Video');
+    const replayBtn = document.getElementById('replayBtn');
+    let stream = null;
+    let isLooping = false;
+    let loopStart = 0;
+
+    // تشغيل الكاميرا الخلفية للهاتف
+    async function startCamera() {
+        try {
+            if(stream) stopCamera();
+            stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: "environment" }, 
+                audio: false 
+            });
+            v.srcObject = stream;
+            v.play();
+        } catch (err) {
+            alert("تنبيه: الكاميرا تتطلب رابط HTTPS (مثل GitHub Pages) لتعمل على الهاتف.");
+        }
+    }
+
+    function stopCamera() {
+        if (stream) {
+            stream.getTracks().forEach(t => t.stop());
+            v.srcObject = null;
+        }
+    }
+
+    // رفع فيديو مسجل
+    document.getElementById('vInput').onchange = (e) => {
+        stopCamera();
+        if(e.target.files[0]) {
+            v.src = URL.createObjectURL(e.target.files[0]);
+            v.play();
+        }
+    };
+
+    // وظيفة الإعادة التلقائية (5 ثوانٍ)
+    function toggleLoop() {
+        if (v.srcObject) return alert("الإعادة تعمل على الفيديوهات المسجلة فقط.");
+        isLooping = !isLooping;
+        if (isLooping) {
+            loopStart = Math.max(0, v.currentTime - 5);
+            replayBtn.classList.add('btn-active');
+            v.currentTime = loopStart;
+            v.play();
+        } else {
+            replayBtn.classList.remove('btn-active');
+        }
+    }
+
+    v.ontimeupdate = () => {
+        if (isLooping && v.currentTime >= loopStart + 5) {
+            v.currentTime = loopStart;
+            v.play();
+        }
+    };
+</script>
+
+</body>
+</html>
