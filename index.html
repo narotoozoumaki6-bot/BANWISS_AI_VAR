@@ -3,87 +3,261 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BANWISS AI VAR | Professional Edition</title>
+    <title>BANWISS AI VAR | PRO SYSTEM</title>
     <style>
-        body { margin: 0; background: #000; color: #fff; font-family: Arial, sans-serif; overflow: hidden; touch-action: none; }
-        #video-container { position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
-        video { width: 100%; height: 100%; object-fit: contain; }
-        .controls { position: fixed; bottom: 30px; left: 0; right: 0; display: flex; justify-content: center; gap: 12px; z-index: 1000; padding: 10px; }
-        button { 
-            background: rgba(220, 20, 60, 0.9); border: 2px solid #fff; color: white; padding: 15px; border-radius: 15px; 
-            font-weight: bold; font-size: 14px; min-width: 100px; -webkit-touch-callout: none; user-select: none;
+        /* التنسيق الأساسي لمنع أي تداخل من المتصفح */
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            outline: none;
         }
-        button:active { background: #fff; color: #dc143c; }
-        .label { position: absolute; top: -20px; width: 100%; text-align: center; font-size: 10px; color: #ccc; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            touch-action: none;
+        }
+
+        /* حاوية الفيديو الرئيسية */
+        #video-container {
+            position: relative;
+            flex: 1;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            z-index: 1;
+        }
+
+        /* لوحة التحكم السفلية */
+        .controls-layer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 10px 40px 10px;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            z-index: 100;
+        }
+
+        .btn {
+            flex: 1;
+            height: 70px;
+            background: rgba(220, 20, 60, 0.9);
+            border: 2px solid #ffffff;
+            border-radius: 12px;
+            color: white;
+            font-weight: bold;
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        .btn:active {
+            background: #ffffff;
+            color: #dc143c;
+            transform: scale(0.96);
+        }
+
+        .btn-icon {
+            font-size: 22px;
+            margin-bottom: 5px;
+        }
+
+        /* لوحة معلومات الحالة */
+        #status-bar {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-right: 4px solid #dc143c;
+            font-size: 14px;
+            z-index: 1000;
+            border-radius: 4px;
+        }
+
+        /* زر مخفي لتحميل الملفات */
+        #file-input {
+            display: none;
+        }
+
+        .upload-zone {
+            background: #222 !important;
+        }
     </style>
 </head>
 <body>
 
-<div id="video-container">
-    <video id="video" autoplay playsinline muted></video>
-</div>
+    <div id="status-bar">النظام جاهز | BANWISS AI</div>
 
-<div class="controls">
-    <button id="cameraBtn">📷 الكاميرا</button>
-    
-    <button id="slowBtn">
-        <div class="label">درجات الإبطاء</div>
-        ⏳ إبطاء (مطول)
-    </button>
-    
-    <button id="replayBtn">
-        <div class="label">إعادة اللقطة</div>
-        🔄 إعادة (مطول)
-    </button>
-</div>
+    <div id="video-container">
+        <video id="mainVideo" playsinline muted autoplay></video>
+    </div>
+
+    <!-- زر رفع فيديو من الذاكرة -->
+    <input type="file" id="file-input" accept="video/*">
+
+    <div class="controls-layer">
+        <button class="btn upload-zone" id="uploadBtn">
+            <span class="btn-icon">📁</span>
+            <span>ملف فيديو</span>
+        </button>
+
+        <button class="btn" id="cameraBtn">
+            <span class="btn-icon">📷</span>
+            <span>بث مباشر</span>
+        </button>
+
+        <button class="btn" id="slowBtn">
+            <span class="btn-icon">⏳</span>
+            <span>إبطاء (مطول)</span>
+        </button>
+
+        <button class="btn" id="replayBtn">
+            <span class="btn-icon">🔄</span>
+            <span>إعادة (مطول)</span>
+        </button>
+    </div>
 
 <script>
-    const video = document.getElementById('video');
-    let replayPoint = 0;
+    const video = document.getElementById('mainVideo');
+    const status = document.getElementById('status-bar');
+    const fileInput = document.getElementById('file-input');
 
-    // 1. تشغيل الكاميرا الخلفية فوراً
+    // مصفوفات التحكم الأصلية
+    const slowSpeeds = [0.5, 0.25, 0.15, 0.05];
+    let slowIdx = 0;
+    let slowInterval = null;
+
+    const replayOffsets = [1, 2, 3, 5, 8];
+    let replayIdx = 0;
+    let replayInterval = null;
+
+    // 1. نظام فتح ملف من الهاتف (Video File)
+    document.getElementById('uploadBtn').onclick = () => fileInput.click();
+
+    fileInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const url = URL.createObjectURL(file);
+            video.srcObject = null;
+            video.src = url;
+            video.loop = false;
+            video.play();
+            status.innerText = "تم تحميل الفيديو: " + file.name;
+        }
+    };
+
+    // 2. نظام الكاميرا الحية (Live Camera)
     document.getElementById('cameraBtn').onclick = async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: "environment" } 
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "environment", width: 1920, height: 1080 }
             });
+            video.src = "";
             video.srcObject = stream;
+            status.innerText = "البث المباشر: نشط";
         } catch (err) {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true });
             video.srcObject = stream;
         }
     };
 
-    // 2. ميزة "درجات الإبطاء" بالضغط المطول
+    // 3. نظام الإبطاء بالضغط المطول (تعدد الدرجات)
     const slowBtn = document.getElementById('slowBtn');
-    slowBtn.onmousedown = slowBtn.ontouchstart = (e) => {
+
+    function startSlow(e) {
         e.preventDefault();
-        video.playbackRate = 0.25; // الدرجة التي اخترتها للإبطاء الشديد
-    };
-    slowBtn.onmouseup = slowBtn.ontouchend = () => {
+        video.playbackRate = slowSpeeds[slowIdx];
+        status.innerText = `السرعة الحالية: ${video.playbackRate}x`;
+        
+        slowInterval = setInterval(() => {
+            slowIdx = (slowIdx + 1) % slowSpeeds.length;
+            video.playbackRate = slowSpeeds[slowIdx];
+            status.innerText = `السرعة الحالية: ${video.playbackRate}x`;
+        }, 1000);
+    }
+
+    function stopSlow(e) {
+        e.preventDefault();
+        clearInterval(slowInterval);
         video.playbackRate = 1.0;
-    };
+        slowIdx = 0;
+        status.innerText = "سرعة طبيعية";
+    }
 
-    // 3. ميزة "إعادة اللقطة" المستعادة (Loop) بالضغط المطول
+    slowBtn.addEventListener('touchstart', startSlow);
+    slowBtn.addEventListener('touchend', stopSlow);
+    slowBtn.addEventListener('mousedown', startSlow);
+    slowBtn.addEventListener('mouseup', stopSlow);
+
+    // 4. نظام إعادة اللقطة (Loop) بالضغط المطول (تعدد الثواني)
     const replayBtn = document.getElementById('replayBtn');
-    let isReplaying = false;
 
-    replayBtn.onmousedown = replayBtn.ontouchstart = (e) => {
+    function startReplay(e) {
         e.preventDefault();
-        replayPoint = video.currentTime; // تسجيل لحظة بداية الإعادة
-        isReplaying = true;
-        video.loop = true; // تفعيل ميزة الإعادة المستمرة للقطة
-    };
+        let currentTime = video.currentTime;
+        video.loop = true;
 
-    replayBtn.onmouseup = replayBtn.ontouchend = () => {
-        // إذا أردت أن يتوقف التكرار عند رفع الإصبع، اترك الكود هكذا
-        // أما إذا أردت استمرار التكرار للأبد، يمكننا تعديله
+        const performReplay = () => {
+            let offset = replayOffsets[replayIdx];
+            video.currentTime = Math.max(0, currentTime - offset);
+            status.innerText = `إعادة: -${offset} ثانية`;
+        };
+
+        performReplay();
+
+        replayInterval = setInterval(() => {
+            replayIdx = (replayIdx + 1) % replayOffsets.length;
+            performReplay();
+        }, 1500);
+    }
+
+    function stopReplay(e) {
+        e.preventDefault();
+        clearInterval(replayInterval);
         video.loop = false;
-        isReplaying = false;
-    };
+        replayIdx = 0;
+        status.innerText = "وضع المشاهدة العادي";
+    }
 
-    // منع ظهور القوائم المزعجة للهاتف
-    window.oncontextmenu = (e) => { e.preventDefault(); };
+    replayBtn.addEventListener('touchstart', startReplay);
+    replayBtn.addEventListener('touchend', stopReplay);
+    replayBtn.addEventListener('mousedown', startReplay);
+    replayBtn.addEventListener('mouseup', stopReplay);
+
+    // حماية الواجهة
+    window.oncontextmenu = (e) => e.preventDefault();
+    document.addEventListener('touchmove', (e) => {
+        if (e.scale !== 1) e.preventDefault();
+    }, { passive: false });
+
 </script>
 </body>
 </html>
