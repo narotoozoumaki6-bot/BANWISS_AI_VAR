@@ -3,126 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BANWISS AI VAR | M5 Pro</title>
+    <title>BANWISS AI VAR | Professional Edition</title>
     <style>
-        :root { --m-blue: #005eb8; --m-red: #ce1126; --m-black: #000; }
-        body { background: var(--m-black); color: white; margin: 0; padding: 0; font-family: sans-serif; overflow: hidden; }
-        
-        /* حاوية الفيديو: تأخذ المساحة المتبقية فوق الأزرار */
-        .video-wrapper {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 160px;
-            display: flex; justify-content: center; align-items: center; background: #000;
+        body { margin: 0; background: #000; color: #fff; font-family: Arial, sans-serif; overflow: hidden; touch-action: none; }
+        #video-container { position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
+        video { width: 100%; height: 100%; object-fit: contain; }
+        .controls { position: fixed; bottom: 30px; left: 0; right: 0; display: flex; justify-content: center; gap: 12px; z-index: 1000; padding: 10px; }
+        button { 
+            background: rgba(220, 20, 60, 0.9); border: 2px solid #fff; color: white; padding: 15px; border-radius: 15px; 
+            font-weight: bold; font-size: 14px; min-width: 100px; -webkit-touch-callout: none; user-select: none;
         }
-        video { max-width: 100%; max-height: 100%; object-fit: contain; }
-
-        /* شريط التحكم الثابت أسفل الشاشة (لا يتأثر بالزووم) */
-        .fixed-footer {
-            position: fixed; bottom: 0; left: 0; width: 100%;
-            height: 150px; background: rgba(15, 15, 15, 0.98);
-            border-top: 3px solid var(--m-blue);
-            display: flex; flex-direction: column; justify-content: space-evenly;
-            z-index: 999999; padding-bottom: env(safe-area-inset-bottom);
-        }
-
-        .row { display: flex; gap: 8px; justify-content: center; padding: 0 10px; }
-        
-        .btn { 
-            flex: 1; padding: 12px 5px; border: none; border-radius: 6px; 
-            color: white; font-weight: bold; font-size: 14px; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; gap: 5px;
-        }
-        .btn-m { background: var(--m-blue); }
-        .btn-var { background: var(--m-red); }
-        .btn-gray { background: #333; }
-        .btn-active { border: 2px solid white; box-shadow: 0 0 15px var(--m-red); }
+        button:active { background: #fff; color: #dc143c; }
+        .label { position: absolute; top: -20px; width: 100%; text-align: center; font-size: 10px; color: #ccc; }
     </style>
 </head>
 <body>
 
-<div class="video-wrapper">
-    <video id="m5Video" playsinline autoplay muted></video>
+<div id="video-container">
+    <video id="video" autoplay playsinline muted></video>
 </div>
 
-<div class="fixed-footer">
-    <div class="row">
-        <label class="btn btn-m">📁 فيديو <input type="file" id="vInput" hidden accept="video/*"></label>
-        <button class="btn btn-var" onclick="startCamera()">📷 فتح الكاميرا</button>
-        <button class="btn btn-gray" onclick="stopCamera()">❌ إغلاق</button>
-    </div>
-
-    <div class="row">
-        <button class="btn btn-gray" onclick="v.currentTime -= 1">⏪ 1ث</button>
-        <button class="btn btn-m" onclick="v.play()">▶️</button>
-        <button class="btn btn-m" onclick="v.pause()">⏸️</button>
-        <button class="btn btn-gray" onclick="v.currentTime += 1">1ث ⏩</button>
-    </div>
-
-    <div class="row">
-        <button class="btn btn-var" id="replayBtn" onclick="toggleLoop()">🔄 إعادة مستمرة</button>
-        <button class="btn btn-gray" onclick="v.playbackRate = 0.5">🐢 بطيء</button>
-        <button class="btn btn-gray" onclick="v.playbackRate = 1">🏎️ عادي</button>
-    </div>
+<div class="controls">
+    <button id="cameraBtn">📷 الكاميرا</button>
+    
+    <button id="slowBtn">
+        <div class="label">درجات الإبطاء</div>
+        ⏳ إبطاء (مطول)
+    </button>
+    
+    <button id="replayBtn">
+        <div class="label">إعادة اللقطة</div>
+        🔄 إعادة (مطول)
+    </button>
 </div>
 
 <script>
-    const v = document.getElementById('m5Video');
-    const replayBtn = document.getElementById('replayBtn');
-    let stream = null;
-    let isLooping = false;
-    let loopStart = 0;
+    const video = document.getElementById('video');
+    let replayPoint = 0;
 
-    // تشغيل الكاميرا الخلفية للهاتف
-    async function startCamera() {
+    // 1. تشغيل الكاميرا الخلفية فوراً
+    document.getElementById('cameraBtn').onclick = async () => {
         try {
-            if(stream) stopCamera();
-            stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: "environment" }, 
-                audio: false 
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: "environment" } 
             });
-            v.srcObject = stream;
-            v.play();
+            video.srcObject = stream;
         } catch (err) {
-            alert("تنبيه: الكاميرا تتطلب رابط HTTPS (مثل GitHub Pages) لتعمل على الهاتف.");
-        }
-    }
-
-    function stopCamera() {
-        if (stream) {
-            stream.getTracks().forEach(t => t.stop());
-            v.srcObject = null;
-        }
-    }
-
-    // رفع فيديو مسجل
-    document.getElementById('vInput').onchange = (e) => {
-        stopCamera();
-        if(e.target.files[0]) {
-            v.src = URL.createObjectURL(e.target.files[0]);
-            v.play();
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
         }
     };
 
-    // وظيفة الإعادة التلقائية (5 ثوانٍ)
-    function toggleLoop() {
-        if (v.srcObject) return alert("الإعادة تعمل على الفيديوهات المسجلة فقط.");
-        isLooping = !isLooping;
-        if (isLooping) {
-            loopStart = Math.max(0, v.currentTime - 5);
-            replayBtn.classList.add('btn-active');
-            v.currentTime = loopStart;
-            v.play();
-        } else {
-            replayBtn.classList.remove('btn-active');
-        }
-    }
-
-    v.ontimeupdate = () => {
-        if (isLooping && v.currentTime >= loopStart + 5) {
-            v.currentTime = loopStart;
-            v.play();
-        }
+    // 2. ميزة "درجات الإبطاء" بالضغط المطول
+    const slowBtn = document.getElementById('slowBtn');
+    slowBtn.onmousedown = slowBtn.ontouchstart = (e) => {
+        e.preventDefault();
+        video.playbackRate = 0.25; // الدرجة التي اخترتها للإبطاء الشديد
     };
+    slowBtn.onmouseup = slowBtn.ontouchend = () => {
+        video.playbackRate = 1.0;
+    };
+
+    // 3. ميزة "إعادة اللقطة" المستعادة (Loop) بالضغط المطول
+    const replayBtn = document.getElementById('replayBtn');
+    let isReplaying = false;
+
+    replayBtn.onmousedown = replayBtn.ontouchstart = (e) => {
+        e.preventDefault();
+        replayPoint = video.currentTime; // تسجيل لحظة بداية الإعادة
+        isReplaying = true;
+        video.loop = true; // تفعيل ميزة الإعادة المستمرة للقطة
+    };
+
+    replayBtn.onmouseup = replayBtn.ontouchend = () => {
+        // إذا أردت أن يتوقف التكرار عند رفع الإصبع، اترك الكود هكذا
+        // أما إذا أردت استمرار التكرار للأبد، يمكننا تعديله
+        video.loop = false;
+        isReplaying = false;
+    };
+
+    // منع ظهور القوائم المزعجة للهاتف
+    window.oncontextmenu = (e) => { e.preventDefault(); };
 </script>
-
 </body>
 </html>
