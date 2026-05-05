@@ -2,359 +2,529 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0">
-    <title>BANWISS AI VAR | M5 Pro Control</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>BANWISS AI VAR | نظام التحكيم الذكي</title>
     <style>
-        :root { 
-            --m-blue: #005eb8; 
-            --m-red: #ce1126; 
-            --m-black: #000; 
-            --m-silver: #a2adbc; 
+        * {
+            box-sizing: border-box;
+            user-select: none; /* تحسين اللمس في الهواتف */
         }
-        body { 
-            background: var(--m-black); 
-            color: white; 
-            font-family: sans-serif; 
-            margin: 0; 
-            padding-bottom: 130px; 
+
+        :root {
+            --m-blue: #005eb8;
+            --m-red: #ce1126;
+            --m-black: #0a0a0a;
+            --m-silver: #a2adbc;
+            --m-dark: #111111;
+        }
+
+        body {
+            background: var(--m-black);
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
             overflow-x: hidden;
         }
-        
-        .tab { 
-            display: none; 
-        }
-        .tab.active { 
-            display: block; 
+
+        /* تبويب الصفحات */
+        .tabs-nav {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            background: #000000cc;
+            backdrop-filter: blur(8px);
+            padding: 12px;
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            border-bottom: 1px solid var(--m-blue);
         }
 
-        .dashboard, .camera-page { 
-            max-width: 900px; 
-            margin: 0 auto; 
-            padding: 10px; 
+        .tab-btn {
+            background: #222;
+            border: none;
+            padding: 10px 28px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 1rem;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: inherit;
         }
 
-        video { 
-            width: 100%; 
-            max-height: 70vh; 
-            border-radius: 8px; 
-            background: #111; 
+        .tab-btn.active {
+            background: var(--m-blue);
+            box-shadow: 0 0 12px rgba(0,94,184,0.6);
         }
 
-        .fixed-footer {
+        .page {
+            display: none;
+            animation: fade 0.2s ease;
+        }
+
+        .page.active-page {
+            display: block;
+        }
+
+        @keyframes fade {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .dashboard {
+            max-width: 950px;
+            margin: 0 auto;
+            padding: 16px 12px 180px 12px;
+            text-align: center;
+        }
+
+        /* حاوية الفيديو */
+        #video-container, #rec-video-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            background: #000;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid #2a2a2a;
+            margin-bottom: 12px;
+        }
+
+        video {
+            max-width: 100%;
+            height: auto;
+            border-radius: 12px;
+            background: black;
+        }
+
+        .info-bar {
+            color: var(--m-silver);
+            font-size: 13px;
+            margin: 8px 0;
+            background: #1a1a1a;
+            padding: 6px;
+            border-radius: 30px;
+        }
+
+        /* الشريط الثابت السفلي مخصص لكل صفحة لكن سيتم عرضه حسب الصفحة النشطة */
+        .footer-controls {
             position: fixed;
             bottom: 0;
             left: 0;
             width: 100%;
-            background: rgba(20, 20, 20, 0.97);
+            background: rgba(8, 8, 8, 0.98);
             border-top: 2px solid var(--m-blue);
-            padding: 12px 8px;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
+            padding: 12px 6px;
+            z-index: 1000;
+            backdrop-filter: blur(12px);
+            transition: 0.2s;
         }
 
-        .controls-row { 
-            display: flex; 
-            gap: 10px; 
-            justify-content: center; 
-            flex-wrap: wrap; 
-            width: 100%; 
-        }
-        
-        .btn { 
-            padding: 12px 16px; 
-            border: none; 
-            border-radius: 6px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            color: white; 
-            font-size: 14px; 
-        }
-        .btn-m { background: var(--m-blue); }
-        .btn-var { background: var(--m-red); }
-        .btn-active { box-shadow: 0 0 15px var(--m-red); border: 2px solid white; }
-
-        /* زر التصوير الدائري الأحمر */
-        #recordBtn {
-            width: 75px;
-            height: 75px;
-            border-radius: 50%;
-            background: var(--m-red);
-            border: 6px solid #fff;
-            box-shadow: 0 0 20px rgba(206, 17, 38, 0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            color: white;
-            transition: all 0.2s;
-        }
-        #recordBtn.recording {
-            background: #ff4444;
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7); }
-            70% { box-shadow: 0 0 0 15px rgba(255, 68, 68, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0); }
-        }
-
-        .thumbnail-bar {
+        .controls-row {
             display: flex;
             gap: 8px;
-            overflow-x: auto;
-            padding: 8px 0;
-            width: 100%;
-            background: rgba(0,0,0,0.6);
-            border-radius: 8px;
-        }
-        .thumb {
-            width: 60px;
-            height: 60px;
-            object-fit: cover;
-            border-radius: 6px;
-            border: 2px solid #555;
-            cursor: pointer;
-            flex-shrink: 0;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
         }
 
-        /* Gallery Modal */
-        #galleryModal {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.95);
-            display: none;
-            flex-direction: column;
-            z-index: 10000;
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 40px;
+            font-weight: bold;
+            color: white;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.1s linear;
+            font-family: inherit;
         }
-        .gallery-header {
-            padding: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #333;
+
+        .btn-m {
+            background: var(--m-blue);
         }
-        .gallery-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 10px;
-            padding: 15px;
-            overflow-y: auto;
-            flex: 1;
+
+        .btn-var {
+            background: var(--m-red);
         }
-        .gallery-item {
+
+        .btn-gray {
+            background: #3a3a3a;
+        }
+
+        .btn-active {
+            outline: 2px solid white;
+            box-shadow: 0 0 12px var(--m-red);
+            background: #b01020;
+        }
+
+        .dropdown {
             position: relative;
-        }
-        .gallery-item video {
-            width: 100%;
-            border-radius: 8px;
-        }
-        .close-gallery {
-            font-size: 28px;
-            cursor: pointer;
-            padding: 5px 15px;
+            display: inline-block;
         }
 
-        .seconds-menu { display: none; background: #222; padding: 10px; border-radius: 8px; gap: 8px; }
-        .upload-btn { background: #333; padding: 10px; border-radius: 5px; cursor: pointer; }
+        .menu {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            background: #1f1f1f;
+            border: 1px solid var(--m-blue);
+            flex-direction: column;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+
+        .menu button {
+            background: #2c2c2c;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-bottom: 1px solid #444;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .dropdown:hover .menu {
+            display: flex;
+        }
+
+        .header-btns {
+            margin: 8px 0 18px;
+            display: flex;
+            justify-content: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .badge-icon {
+            background: var(--m-red);
+            padding: 6px 12px;
+            border-radius: 30px;
+            font-size: 12px;
+        }
+
+        @media (max-width: 550px) {
+            .btn { padding: 8px 12px; font-size: 11px; }
+            .tab-btn { padding: 6px 20px; font-size: 0.9rem; }
+        }
     </style>
 </head>
 <body>
 
-<!-- تبويب الـ Upload + Replay -->
-<div id="uploadTab" class="tab active dashboard">
-    <div style="text-align:center; padding: 10px;">
-        <label class="upload-btn">📁 ارفع الفيديو <input type="file" id="vUpload" hidden accept="video/*"></label>
-    </div>
-    <video id="m5Video" playsinline controls></video>
-    <div id="chat" style="font-size: 12px; color: var(--m-silver); text-align: center; margin-top: 10px;">
-        نظام BANWISS AI VAR جاهز..
-    </div>
+<div class="tabs-nav">
+    <button class="tab-btn active" data-page="page1">📼 تحليل الفيديو المسجل</button>
+    <button class="tab-btn" data-page="page2">🎥 تسجيل مباشر + VAR لحظي</button>
 </div>
 
-<!-- صفحة التصوير المباشر -->
-<div id="cameraTab" class="tab camera-page">
-    <video id="liveVideo" autoplay playsinline muted style="background:#000;"></video>
-
-    <div class="thumbnail-bar" id="thumbnailBar"></div>
-</div>
-
-<!-- Fixed Footer مشترك -->
-<div class="fixed-footer">
-    <!-- أزرار التبويب -->
-    <div class="controls-row" style="margin-bottom:8px;">
-        <button class="btn btn-m" onclick="switchTab(1)">📤 رفع فيديو</button>
-        <button class="btn btn-m" onclick="switchTab(2)">📹 تصوير مباشر</button>
+<!-- الصفحة 1: تحليل الفيديو (تضم الإعادة التلقائية, البطء, التنقل) وليس فيها اغلاق كاميرا -->
+<div id="page1" class="page active-page">
+    <div class="dashboard">
+        <div class="header-btns">
+            <label style="cursor:pointer; background:var(--m-blue); padding:10px 20px; border-radius:40px; font-size:14px;">
+                📂 رفع فيديو <input type="file" id="vInput" hidden accept="video/*">
+            </label>
+            <div class="badge-icon">🎬 VAR Studio</div>
+        </div>
+        <div id="video-container">
+            <video id="analysisVideo" playsinline></video>
+        </div>
+        <div id="chat" class="info-bar">⚡ وضع التحليل : تحكم كامل بالإعادة والبطء</div>
     </div>
-
-    <!-- أزرار صفحة التصوير -->
-    <div id="cameraControls" style="display:none; width:100%; text-align:center;">
-        <button id="recordBtn" onclick="toggleRecording()">●</button>
-        
-        <div class="controls-row" style="margin-top:12px;">
-            <button class="btn btn-var" id="replayLiveBtn">🔄 إعادة اللقطة</button>
-            <button class="btn btn-m" onclick="setSlowMotion(0.5)">🐢 بطيء</button>
-            <button class="btn btn-m" onclick="setSlowMotion(1)">🏎️ عادي</button>
+    <!-- شريط التحكم الخاص بالصفحة الأولى (ثابت) -->
+    <div class="footer-controls" id="footer-page1">
+        <div id="secMenu1" style="display:none; justify-content:center; gap:10px; background:#1e1e1e; padding:8px; border-radius:50px; margin-bottom:8px;">
+            <button class="btn btn-m" onclick="setLoopSecPage1(1)">1 ثانية</button>
+            <button class="btn btn-m" onclick="setLoopSecPage1(3)">3 ثواني</button>
+            <button class="btn btn-m" onclick="setLoopSecPage1(5)">5 ثواني</button>
+        </div>
+        <div class="controls-row">
+            <button class="btn btn-gray" id="back5Btn">⏪ 5ث</button>
+            <button class="btn btn-gray" id="back1Btn">◀️ 1ث</button>
+            <button class="btn btn-m" id="playBtn1">▶️</button>
+            <button class="btn btn-m" id="pauseBtn1">⏸️</button>
+            <button class="btn btn-gray" id="forward1Btn">1ث ▶️</button>
+            <button class="btn btn-gray" id="forward5Btn">5ث ⏩</button>
+        </div>
+        <div class="controls-row">
+            <button class="btn btn-var" id="replayBtnPage1">🔄 إعادة تلقائية</button>
+            <div class="dropdown">
+                <div class="menu">
+                    <button id="speed025">0.25x</button>
+                    <button id="speed05">0.50x</button>
+                    <button id="speed1">1.0x</button>
+                </div>
+                <button class="btn btn-m">🐢 البطء ▽</button>
+            </div>
+            <!-- ملاحظة: لا يوجد زر إغلاق الكاميرا في الصفحة الأولى -->
         </div>
     </div>
-
-    <!-- أزرار صفحة الرفع (القديمة) -->
-    <div id="uploadControls" class="controls-row">
-        <button class="btn btn-m" onclick="document.getElementById('m5Video').play()">▶️</button>
-        <button class="btn btn-m" onclick="document.getElementById('m5Video').pause()">⏸️</button>
-        <button class="btn btn-var" id="replayBtn">🔄 اعادة اللقطة</button>
-        <button class="btn btn-m" onclick="document.getElementById('m5Video').playbackRate = 0.5">🐢 بطيء</button>
-        <button class="btn btn-m" onclick="document.getElementById('m5Video').playbackRate = 1">🏎️ عادي</button>
-    </div>
 </div>
 
-<!-- Gallery Modal -->
-<div id="galleryModal">
-    <div class="gallery-header">
-        <h3>الفيديوهات المسجلة</h3>
-        <span class="close-gallery" onclick="closeGallery()">✕</span>
+<!-- الصفحة 2: تصوير مباشر + ميزات الإعادة التلقائية + البطء + تشغيل/إيقاف موقت + إغلاق الكاميرا -->
+<div id="page2" class="page">
+    <div class="dashboard">
+        <div class="header-btns">
+            <button class="btn btn-var" id="startCamBtn">📷 فتح الكاميرا الخلفية</button>
+            <button class="btn btn-gray" id="stopCamBtn">❌ إغلاق الكاميرا</button>
+        </div>
+        <div id="rec-video-container">
+            <video id="liveCameraVideo" playsinline autoplay muted></video>
+        </div>
+        <div id="liveStatus" class="info-bar">📡 انتظر فتح الكاميرا ...</div>
     </div>
-    <div class="gallery-grid" id="galleryGrid"></div>
+    <!-- شريط التحكم الخاص بالصفحة الثانية: البطء، إعادة تلقائية، زر تشغيل/إيقاف فيديو البث (لن يكون له تأثير على المصدر الحي ولكن سيتم التحكم بالتشغيل/الإيقاف لتجميد البث المرئي، وايضاً الإعادة تعمل على البث المباشر؟ لا يمكن إلا على فيديو مسجل، لكن سنحاكي الميزة: الاعادة التلقائية هنا ستطبق على فيديو "مؤقت مسجل" ولكن المستخدم يصور حي. لتحقيق الطلب بسلاسة: سنحول البث إلى عنصر فيديو قابل للتحكم بالإعادة التلقائية والبطء بشرط أن نتمكن من تسجيل مقاطع لحظية؟ لكن الطلب يقول: "الصفحة الثانية تتيح لك ان تصور فيديو من التطبيق نفسه وانت تصور تقدر تستخدم ميزات من الصفحة الأولى مثل الاعادة التلقائية وميزة الابطاء واغلاق الكاميرا وبدء/ايقاف". -->
+    <!-- الفكرة الذكية: سنحافظ على نفس مفهوم "الفيديو المباشر" ولكن مع خيار "تجميد البث" مؤقتاً باستخدام pause/play، ويمكن استخدام الإعادة التلقائية فقط إذا قمت بتسجيل مقطع؟ لكن لتحقيق طلب المستخدم بالضبط: عند التصوير المباشر، يمكن تطبيق "البطء" على الفيديو الحي (playbackRate) وهذا يعمل على عنصر الفيديو الحي بشكل رائع! والإعادة التلقائية ستكون خاصة بالفيديو المباشر فقط عندما تقوم بإعادة تشغيل جزء محدد من البث الحي؟ الحل: سنقوم بمحاكاة الـ Loop على البث المباشر عن طريق أخذ currentTime وloopStart ولكن الفيديو الحي sourceObject ليس له duration محدودة. لتوفير تجربة مميزة: سنجعل "الإعادة التلقائية" في الكاميرا تعيد لحظة محددة باستخدام تقنية snapshot? أسهل طريقة: عند تنشيط وضع الإعادة التلقائية في وضع الكاميرا، نقوم بتخزين بداية الحلقة كنسبة من الفيديو ولكن البث الحي لا يسمح. لكن وفقاً لرغبة المستخدم: يريد استخدام نفس الميزات أثناء التصوير، يمكن جعل "الإعادة التلقائية" تعيد عرض آخر 3 ثوان مسجلة عن طريق التقاط frames؟ هذا معقد. الحل الأنسب والأكثر احترافية: الصفحة الثانية تعرض كاميرا حية، وتتيح زر "تجميد/تشغيل" (play/pause) يوقف الصورة الحية، وزر "إعادة تلقائية" يمكن تفعيله ليعيد الفيديو من نقطة التوقف إلى بداية التوقف؟ لكن طبيعياً البث المباشر لا يحتوي على timeline. للحفاظ على الطلب "تصور فيديو من التطبيق نفسه وانت تصور تقدر تستخدم ميزات مثل الاعادة التلقائية والابطاء" سأقوم بدمج تسجيل مؤقت: عندما تضغط على زر "التسجيل السريع" أو نعطي إمكانية التقاط مقطع VAR. لكن لتبسيط الطلب مع الاحترافية: سنضيف في الصفحة الثانية زر "التقط VAR" يحول آخر 5 ثواني من الكاميرا إلى فيديو مؤقت ويطبق عليه الإعادة والبطء. هذا يحقق روح VAR الكامل. 
+    ومع ذلك، صياغة المستخدم: "تتيح لك ان تصور فيديو من التطبيق نفسه وانت تصور تقدر تستخدم ميزات ... الاعادة التلقائية . ميزة الابطاء 🐢 واغلاق الكاميرا ... وزر البدء ▶". سأعطيه حلاً رائعاً: فتح كاميرا حية + يمكنه تطبيق البطء فوراً على البث المباشر (تغيير سرعة العرض للكاميرا وهذا يعمل مع media stream عن طريق ضبط playbackRate). كما يمكنه استخدام "إعادة تلقائية" على الفيديو الحي عن طريق تحويل البث الحي إلى وضع "حلقة قصيرة" تقوم بتخزين buffer؟ التقنية المتقدمة باستخدام MediaRecorder؟ لكنها خارج النطاق. وبما أن الصفحة الثانية يجب أن تحتوي على تصوير وإعادة، سأجعل ميزة "الإعادة التلقائية" في الصفحة الثانية تعمل مثل الصفحة الأولى بالضبط ولكن على "أحدث فيديو تم تحميله أو رفعه من الكاميرا" بناءً على تسجيل سريع. لكن سأبقي الأمر سهل وبسيط وضمن المتوقع: سأضيف زر "⏺ تسجيل VAR" يقوم بتسجيل 6 ثواني من البث الحي ويعرضه في نفس المشغل مع تفعيل الإعادة التلقائية والبطء. هذا يلبي روح الطلب (تصور فيديو وتستخدم الميزات). بالإضافة إلى ذلك، مازال لديك إمكانية التحكم المباشر بالكاميرا (start/stop والتشغيل والإيقاف المؤقت للبث).
+    -->
+
+    <div class="footer-controls" id="footer-page2">
+        <div id="secMenu2" style="display:none; justify-content:center; gap:10px; background:#1e1e1e; padding:8px; border-radius:50px; margin-bottom:8px;">
+            <button class="btn btn-m" onclick="setLoopSecPage2(1)">1 ثانية</button>
+            <button class="btn btn-m" onclick="setLoopSecPage2(3)">3 ثواني</button>
+            <button class="btn btn-m" onclick="setLoopSecPage2(5)">5 ثواني</button>
+        </div>
+        <div class="controls-row">
+            <button class="btn btn-gray" id="camBack5">⏪ 5ث</button>
+            <button class="btn btn-gray" id="camBack1">◀️ 1ث</button>
+            <button class="btn btn-m" id="camPlayBtn">▶️ بدء البث</button>
+            <button class="btn btn-m" id="camPauseBtn">⏸️ تجميد</button>
+            <button class="btn btn-gray" id="camForward1">1ث ▶️</button>
+            <button class="btn btn-gray" id="camForward5">5ث ⏩</button>
+        </div>
+        <div class="controls-row">
+            <button class="btn btn-var" id="replayBtnPage2">🔄 إعادة تلقائية (على آخر مقطع)</button>
+            <div class="dropdown">
+                <div class="menu">
+                    <button id="liveSpeed025">0.25x</button>
+                    <button id="liveSpeed05">0.50x</button>
+                    <button id="liveSpeed1">1.0x</button>
+                </div>
+                <button class="btn btn-m">🐢 البطء ▽ (للصورة الحية)</button>
+            </div>
+            <button class="btn btn-m" id="captureVarBtn">🎬 تسجيل مقطع VAR (6ث)</button>
+        </div>
+        <div class="info-bar" id="varNotify" style="font-size: 12px; margin-top: 8px;">💡 البطء يتحكم بسرعة الكاميرا الحية / الإعادة التلقائية تعمل على آخر مقطع تم تسجيله</div>
+    </div>
 </div>
 
 <script>
-// ==================== متغيرات عامة ====================
-let currentTab = 1;
-let mediaStream = null;
-let mediaRecorder = null;
-let recordedChunks = [];
-let recordedVideos = []; // لتخزين الـ Blobs + URLs
+    // ------------------ المتغيرات العامة ------------------
+    // الصفحة 1 (تحليل الفيديو)
+    const videoElem = document.getElementById('analysisVideo');
+    let streamGlobal = null;
+    let isLoopingPage1 = false;
+    let loopStartPage1 = 0;
+    let loopDurationPage1 = 5;
+    let pressTimerPage1;
 
-const liveVideo = document.getElementById('liveVideo');
-const recordBtn = document.getElementById('recordBtn');
-const thumbnailBar = document.getElementById('thumbnailBar');
-const galleryModal = document.getElementById('galleryModal');
-const galleryGrid = document.getElementById('galleryGrid');
+    // الصفحة 2 (كاميرا + مقطع VAR)
+    const liveVideo = document.getElementById('liveCameraVideo');
+    let cameraStream = null;
+    let isLoopingPage2 = false;
+    let loopStartPage2 = 0;
+    let loopDurationPage2 = 5;
+    let recordedChunks = [];
+    let mediaRecorder = null;
+    let recordedBlobUrl = null;
+    let isVarModeActive = false;   // لو في وضع اعادة على المقطع المسجل
+        
+    // ---- مساعد عام ----
+    function stopCameraOnly() {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+        liveVideo.srcObject = null;
+        document.getElementById('liveStatus').innerHTML = "📷 الكاميرا مغلقة. اضغط 'فتح الكاميرا'";
+    }
 
-// تبديل التبويبات
-function switchTab(tab) {
-    currentTab = tab;
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.getElementById(tab === 1 ? 'uploadTab' : 'cameraTab').classList.add('active');
+    // ---- الصفحة 1 : الفيديو المسجل ----
+    const fileInput = document.getElementById('vInput');
+    fileInput.onchange = (e) => {
+        if(e.target.files[0]) {
+            if(videoElem.srcObject) videoElem.srcObject = null;
+            if(videoElem.src) URL.revokeObjectURL(videoElem.src);
+            videoElem.src = URL.createObjectURL(e.target.files[0]);
+            videoElem.play().catch(e=>console.log);
+            if(isLoopingPage1) { isLoopingPage1 = false; document.getElementById('replayBtnPage1').classList.remove('btn-active'); }
+        }
+    };
+
+    // عناصر التحكم page1
+    document.getElementById('back5Btn').onclick = () => videoElem.currentTime -= 5;
+    document.getElementById('back1Btn').onclick = () => videoElem.currentTime -= 1;
+    document.getElementById('playBtn1').onclick = () => videoElem.play();
+    document.getElementById('pauseBtn1').onclick = () => videoElem.pause();
+    document.getElementById('forward1Btn').onclick = () => videoElem.currentTime += 1;
+    document.getElementById('forward5Btn').onclick = () => videoElem.currentTime += 5;
+
+    // سرعة البطء page1
+    document.getElementById('speed025').onclick = () => { videoElem.playbackRate = 0.25; };
+    document.getElementById('speed05').onclick = () => { videoElem.playbackRate = 0.5; };
+    document.getElementById('speed1').onclick = () => { videoElem.playbackRate = 1.0; };
+
+    // الإعادة التلقائية page1
+    const replayBtn1 = document.getElementById('replayBtnPage1');
+    function toggleLoopPage1() {
+        if (!videoElem.src || videoElem.src === "") { alert("الرجاء رفع فيديو أولاً"); return; }
+        if (videoElem.srcObject) { alert("هذه الميزة خاصة بالفيديو المسجل"); return; }
+        if (!isLoopingPage1) {
+            isLoopingPage1 = true;
+            loopStartPage1 = Math.max(0, videoElem.currentTime - loopDurationPage1);
+            replayBtn1.classList.add('btn-active');
+            videoElem.currentTime = loopStartPage1;
+            videoElem.play();
+        } else {
+            isLoopingPage1 = false;
+            replayBtn1.classList.remove('btn-active');
+        }
+    }
+    videoElem.ontimeupdate = () => {
+        if (isLoopingPage1 && videoElem.currentTime >= loopStartPage1 + loopDurationPage1) {
+            videoElem.currentTime = loopStartPage1;
+            videoElem.play();
+        }
+    };
+    function setLoopSecPage1(sec) { loopDurationPage1 = sec; document.getElementById('secMenu1').style.display = 'none'; if(isLoopingPage1) { isLoopingPage1 = false; toggleLoopPage1(); } }
+    replayBtn1.onmousedown = replayBtn1.ontouchstart = () => { pressTimerPage1 = setTimeout(() => { document.getElementById('secMenu1').style.display = 'flex'; }, 700); };
+    replayBtn1.onmouseup = replayBtn1.ontouchend = () => { clearTimeout(pressTimerPage1); if (document.getElementById('secMenu1').style.display !== 'flex') toggleLoopPage1(); };
+    window.setLoopSecPage1 = setLoopSecPage1;
+
+    // ---- الصفحة 2 : الكاميرا + ميزة البطء الحي + تسجيل مقطع VAR ----
+    async function startCameraBack() {
+        try {
+            if (cameraStream) stopCameraOnly();
+            const constraints = { video: { facingMode: { exact: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false };
+            cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+            liveVideo.srcObject = cameraStream;
+            liveVideo.playbackRate = 1.0;
+            liveVideo.play().catch(e=>console.log);
+            document.getElementById('liveStatus').innerHTML = "✅ الكاميرا الخلفية تعمل - يمكنك تطبيق البطء والإيقاف المؤقت";
+        } catch (err) {
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                liveVideo.srcObject = cameraStream;
+                liveVideo.play();
+                document.getElementById('liveStatus').innerHTML = "⚠️ كاميرا افتراضية (غير خلفية)";
+            } catch (e) { alert("إذن الكاميرا مطلوب"); }
+        }
+    }
+    document.getElementById('startCamBtn').onclick = startCameraBack;
+    document.getElementById('stopCamBtn').onclick = () => { stopCameraOnly(); if(recordedBlobUrl) URL.revokeObjectURL(recordedBlobUrl); recordedBlobUrl=null; isVarModeActive=false; document.getElementById('replayBtnPage2').classList.remove('btn-active'); };
+
+    // التحكم المباشر بالكاميرا (تشغيل/إيقاف مؤقت)
+    document.getElementById('camPlayBtn').onclick = () => { if(liveVideo.srcObject) liveVideo.play(); else alert("الكاميرا غير مفتوحة"); };
+    document.getElementById('camPauseBtn').onclick = () => { if(liveVideo.srcObject) liveVideo.pause(); };
+    // التنقل بالثواني للكاميرا (البث الحي لا يدعم currentTime لكن يمكن محاكاة ولكن سيظهر خطأ، لكننا نتحقق)
+    document.getElementById('camBack5').onclick = () => { if(liveVideo.duration && !isNaN(liveVideo.duration)) liveVideo.currentTime -= 5; else if(!liveVideo.srcObject) alert("لا يوجد فيديو مؤقت"); };
+    document.getElementById('camBack1').onclick = () => { if(liveVideo.duration && !isNaN(liveVideo.duration)) liveVideo.currentTime -= 1; };
+    document.getElementById('camForward1').onclick = () => { if(liveVideo.duration && !isNaN(liveVideo.duration)) liveVideo.currentTime += 1; };
+    document.getElementById('camForward5').onclick = () => { if(liveVideo.duration && !isNaN(liveVideo.duration)) liveVideo.currentTime += 5; };
     
-    document.getElementById('uploadControls').style.display = tab === 1 ? 'flex' : 'none';
-    document.getElementById('cameraControls').style.display = tab === 2 ? 'block' : 'none';
+    // البطء على الكاميرا الحية -> playbackRate
+    document.getElementById('liveSpeed025').onclick = () => { if(liveVideo.srcObject) liveVideo.playbackRate = 0.25; else if(liveVideo.src) liveVideo.playbackRate = 0.25; };
+    document.getElementById('liveSpeed05').onclick = () => { if(liveVideo.srcObject) liveVideo.playbackRate = 0.5; else if(liveVideo.src) liveVideo.playbackRate = 0.5; };
+    document.getElementById('liveSpeed1').onclick = () => { if(liveVideo.srcObject) liveVideo.playbackRate = 1.0; else if(liveVideo.src) liveVideo.playbackRate = 1.0; };
 
-    if (tab === 2) startCamera();
-    else stopCamera();
-}
+    // تسجيل مقطع VAR من الكاميرا الحية (6 ثواني) لاستخدام الاعادة التلقائية والبطء
+    let mediaRecorderInstance = null;
+    let recordedData = [];
+    document.getElementById('captureVarBtn').onclick = async () => {
+        if (!cameraStream) { alert("افتح الكاميرا أولاً"); return; }
+        // ايقاف أي وضع إعادة سابق
+        if(isLoopingPage2) { isLoopingPage2 = false; document.getElementById('replayBtnPage2').classList.remove('btn-active'); }
+        const streamForRecord = cameraStream;
+        recordedData = [];
+        try {
+            const recorder = new MediaRecorder(streamForRecord, { mimeType: 'video/webm' });
+            mediaRecorderInstance = recorder;
+            recorder.ondataavailable = (e) => { if(e.data.size>0) recordedData.push(e.data); };
+            recorder.onstop = () => {
+                const blob = new Blob(recordedData, { type: 'video/webm' });
+                if(recordedBlobUrl) URL.revokeObjectURL(recordedBlobUrl);
+                recordedBlobUrl = URL.createObjectURL(blob);
+                // حفظ حالة الفيديو الحالي للكاميرا مؤقتاً، واستبدال مصدر liveVideo بالمقطع المسجل مؤقتاً لعرض الاعادة
+                if (liveVideo.srcObject) {
+                    // نحتفظ بالكمرا جانباً ولكن نعرض المقطع المسجل
+                    const originalStream = liveVideo.srcObject;
+                    liveVideo.srcObject = null;
+                    liveVideo.src = recordedBlobUrl;
+                    liveVideo.play();
+                    document.getElementById('liveStatus').innerHTML = "🎥 تم تسجيل مقطع VAR (6ث) - الآن يمكنك استخدام الإعادة التلقائية والبطء على هذا المقطع. اضغط 'إعادة تلقائية' للتفعيل. لاستئناف الكاميرا الحية أعد فتح الكاميرا مجدداً.";
+                    isVarModeActive = true;
+                    // إضافة استماع للإنهاء
+                    liveVideo.onended = () => { if(isVarModeActive) { /* لا نعيد */ } };
+                } else {
+                    liveVideo.src = recordedBlobUrl;
+                    liveVideo.play();
+                    isVarModeActive = true;
+                    document.getElementById('liveStatus').innerHTML = "🎬 مقطع VAR جاهز (إعادة تلقائية / بطء)";
+                }
+                // تفعيل أزرار التنقل للمقطع
+            };
+            recorder.start(6000); // يسجل 6 ثواني ثم يتوقف تلقائياً بعد 6000ms
+            setTimeout(() => {
+                if(recorder.state === 'recording') recorder.stop();
+            }, 6100);
+            document.getElementById('varNotify').innerHTML = "⏺ جاري تسجيل 6 ثواني من الكاميرا...";
+            setTimeout(() => { document.getElementById('varNotify').innerHTML = "💡 الآن يمكنك تفعيل الإعادة التلقائية على المقطع المسجل"; }, 6200);
+        } catch(e) { alert("تسجيل غير ممكن: "+e.message); }
+    };
 
-// ==================== كاميرا + تسجيل ====================
-async function startCamera() {
-    try {
-        mediaStream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment" }, 
-            audio: true 
+    // الإعادة التلقائية للصفحة الثانية (تعمل على المقطع المسجل)
+    const replayBtn2 = document.getElementById('replayBtnPage2');
+    function toggleLoopPage2() {
+        if (!liveVideo.src && !liveVideo.srcObject) { alert("لا يوجد فيديو (افتح الكاميرا أو سجل مقطع VAR)"); return; }
+        if (liveVideo.srcObject && !isVarModeActive) { alert("الإعادة التلقائية تعمل على مقطع VAR الذي تم تسجيله فقط. استخدم 'تسجيل مقطع VAR' ثم فعل الإعادة."); return; }
+        if (!isLoopingPage2) {
+            isLoopingPage2 = true;
+            if(liveVideo.duration && isFinite(liveVideo.duration)) {
+                loopStartPage2 = Math.max(0, liveVideo.currentTime - loopDurationPage2);
+                if(loopStartPage2 < 0) loopStartPage2 = 0;
+                replayBtn2.classList.add('btn-active');
+                liveVideo.currentTime = loopStartPage2;
+                liveVideo.play();
+            } else { alert("المقطع غير جاهز للإعادة"); isLoopingPage2=false; }
+        } else {
+            isLoopingPage2 = false;
+            replayBtn2.classList.remove('btn-active');
+        }
+    }
+    liveVideo.ontimeupdate = () => {
+        if (isLoopingPage2 && liveVideo.duration && isFinite(liveVideo.duration) && liveVideo.currentTime >= loopStartPage2 + loopDurationPage2) {
+            liveVideo.currentTime = loopStartPage2;
+            liveVideo.play();
+        }
+    };
+    function setLoopSecPage2(sec) { loopDurationPage2 = sec; document.getElementById('secMenu2').style.display = 'none'; if(isLoopingPage2) { isLoopingPage2 = false; toggleLoopPage2(); } }
+    replayBtn2.onmousedown = replayBtn2.ontouchstart = () => { pressTimerPage2 = setTimeout(() => { document.getElementById('secMenu2').style.display = 'flex'; }, 700); };
+    replayBtn2.onmouseup = replayBtn2.ontouchend = () => { clearTimeout(pressTimerPage2); if (document.getElementById('secMenu2').style.display !== 'flex') toggleLoopPage2(); };
+    window.setLoopSecPage2 = setLoopSecPage2;
+    let pressTimerPage2;
+
+    // ---- التبديل بين الصفحات مع تنظيف بسيط ----
+    const tabs = document.querySelectorAll('.tab-btn');
+    const pages = document.querySelectorAll('.page');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const pageId = tab.getAttribute('data-page');
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            pages.forEach(p => p.classList.remove('active-page'));
+            document.getElementById(pageId).classList.add('active-page');
+            // عند الخروج من الصفحة 2 لا نغلق الكاميرا تلقائياً حتى لا نفقد البث
         });
-        liveVideo.srcObject = mediaStream;
-    } catch (err) {
-        alert("فشل في الوصول إلى الكاميرا: " + err.message);
-    }
-}
-
-function stopCamera() {
-    if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
-        mediaStream = null;
-    }
-    liveVideo.srcObject = null;
-}
-
-function toggleRecording() {
-    if (!mediaRecorder || mediaRecorder.state === "inactive") {
-        // بدء التسجيل
-        recordedChunks = [];
-        mediaRecorder = new MediaRecorder(mediaStream, { mimeType: 'video/webm;codecs=vp9' });
-        
-        mediaRecorder.ondataavailable = e => {
-            if (e.data.size > 0) recordedChunks.push(e.data);
-        };
-
-        mediaRecorder.onstop = () => {
-            const blob = new Blob(recordedChunks, { type: 'video/webm' });
-            const url = URL.createObjectURL(blob);
-            
-            recordedVideos.push({ url, blob });
-            addThumbnail(url);
-        };
-
-        mediaRecorder.start();
-        recordBtn.classList.add('recording');
-        recordBtn.textContent = "■";
-        
-    } else {
-        // إيقاف التسجيل
-        mediaRecorder.stop();
-        recordBtn.classList.remove('recording');
-        recordBtn.textContent = "●";
-    }
-}
-
-// إضافة ثمبنيل في الشريط السفلي
-function addThumbnail(videoUrl) {
-    const thumb = document.createElement('img');
-    thumb.className = 'thumb';
-    thumb.src = 'https://via.placeholder.com/60x60/222/fff?text=Video'; // يمكن تحسينه باستخدام canvas لأخذ لقطة
-    
-    thumb.onclick = () => showGallery();
-    thumbnailBar.appendChild(thumb);
-}
-
-// ==================== Gallery ====================
-function showGallery() {
-    galleryGrid.innerHTML = '';
-    
-    recordedVideos.forEach((vid, index) => {
-        const div = document.createElement('div');
-        div.className = 'gallery-item';
-        div.innerHTML = `
-            <video src="${vid.url}" controls></video>
-        `;
-        galleryGrid.appendChild(div);
     });
     
-    galleryModal.style.display = 'flex';
-}
-
-function closeGallery() {
-    galleryModal.style.display = 'none';
-}
-
-// ==================== أزرار إعادة اللقطة والبطيء في وضع التصوير ====================
-document.getElementById('replayLiveBtn').addEventListener('click', () => {
-    // يمكنك تطويره لاحقاً (مثلاً إعادة تشغيل آخر فيديو)
-    if (recordedVideos.length > 0) {
-        const last = recordedVideos[recordedVideos.length - 1];
-        const tempVideo = document.createElement('video');
-        tempVideo.src = last.url;
-        tempVideo.play();
-        alert("جاري إعادة تشغيل آخر لقطة...");
-    }
-});
-
-function setSlowMotion(rate) {
-    if (liveVideo.srcObject) liveVideo.playbackRate = rate;
-}
-
-// ==================== الكود القديم (رفع الفيديو) ====================
-const v = document.getElementById('m5Video');
-document.getElementById('vUpload').addEventListener('change', e => {
-    if (e.target.files[0]) v.src = URL.createObjectURL(e.target.files[0]);
-});
-
-// يمكنك نسخ باقي كود الـ Replay القديم هنا إذا أردت (toggleLoop إلخ)
-
-// بدء التطبيق
-window.onload = () => {
-    switchTab(1); // يبدأ بصفحة الرفع
-};
+    // small fix: تأكد من أنه عند تحميل الفيديو في الصفحة الأولى نوقف loop
+    window.addEventListener('load', () => {
+        videoElem.src = null;
+        if(fileInput) fileInput.value = '';
+    });
 </script>
 
 </body>
